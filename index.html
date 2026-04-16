@@ -587,37 +587,87 @@
     }
   }
 
-  @media (max-width: 640px) {
+  @media (max-width: 768px) {
     .materials-story {
-      height: 460vh;
+      height: 520vh;
     }
 
     .materials-sticky {
+      position: sticky;
+      top: 0;
+      height: 100svh;
+      overflow: hidden;
       justify-content: center;
-      padding-top: 1.5rem;
-      padding-bottom: 1.5rem;
+      padding: 0.75rem 0;
     }
 
     .materials-intro {
-      width: calc(100% - 1.25rem);
-      margin-bottom: 0.8rem;
+      width: calc(100% - 1rem);
+      margin: 0 auto 0.6rem;
+      text-align: center;
+    }
+
+    .materials-intro .title {
+      font-size: clamp(1.45rem, 6vw, 2rem);
+      line-height: 1.05;
+    }
+
+    .materials-intro .subtitle {
+      font-size: 0.8rem;
+      line-height: 1.4;
+      margin-top: 0.35rem;
+    }
+
+    .materials-track {
+      display: flex;
+      gap: 3vw;
+      width: max-content;
+      padding: 0 3vw;
+      will-change: transform;
     }
 
     .material-panel {
       width: 94vw;
-      padding: 0.95rem;
-      gap: 0.85rem;
+      min-height: auto;
+      padding: 0.75rem;
+      gap: 0.55rem;
+      border-radius: 16px;
+      grid-template-columns: 1fr;
+    }
+
+    .material-meta h3 {
+      font-size: 1.25rem;
+      margin: 0.05rem 0 0.2rem;
     }
 
     .material-meta p {
-      font-size: 0.88rem;
-      line-height: 1.55;
+      font-size: 0.78rem;
+      line-height: 1.35;
+    }
+
+    .material-compare {
+      grid-template-columns: 1fr;
+      gap: 0.45rem;
+    }
+
+    .compare-arrow {
+      transform: rotate(90deg);
+      font-size: 0.95rem;
+      line-height: 1;
     }
 
     .compare-card {
-      aspect-ratio: 4 / 3;
+      height: auto;
+      aspect-ratio: 16 / 8.5;
+      border-radius: 12px;
     }
-    
+
+    .compare-tag {
+      left: 0.55rem;
+      top: 0.55rem;
+      font-size: 0.66rem;
+      padding: 0.22rem 0.48rem;
+    }
   }
 
   /* 第三幕：數據卡重排版 */
@@ -1075,7 +1125,6 @@
     <section class="materials-story" id="materials-story">
     <div class="materials-sticky">
       <div class="materials-intro">
-        <span class="eyebrow">Recovered Materials</span>
         <h2 class="title">Precision Dismantling</h2>
         <p class="subtitle">
           Moving beyond traditional demolition. We identify and categorize each component, ensuring every material returns to its rightful place in the circular economy.
@@ -1460,31 +1509,31 @@
 
       const materialsTrack = document.querySelector('.materials-track');
 
-      function setupMaterialsScroll() {
-        ScrollTrigger.getAll().forEach((st) => {
-          if (
-            st.vars &&
-            (st.vars.trigger === '#materials-story' || st.vars.id === 'materials-sequence')
-          ) {
-            st.kill();
-          }
-        });
+    function setupMaterialsScroll() {
+      ScrollTrigger.getAll().forEach((st) => {
+        if (
+          st.vars &&
+          (st.vars.trigger === '#materials-story' || st.vars.id === 'materials-sequence')
+        ) {
+          st.kill();
+        }
+      });
 
-        const story = document.querySelector('#materials-story');
-        const sticky = document.querySelector('.materials-sticky');
-        const lastPanel = materialsTrack.querySelector('.material-panel:last-child');
+      const story = document.querySelector('#materials-story');
+      const sticky = document.querySelector('.materials-sticky');
+      const lastPanel = materialsTrack.querySelector('.material-panel:last-child');
 
-        gsap.killTweensOf(materialsTrack);
-        gsap.killTweensOf(sticky);
-        gsap.set(materialsTrack, { x: 0 });
-        gsap.set(sticky, { opacity: 1 });
+      gsap.killTweensOf(materialsTrack);
+      gsap.killTweensOf(sticky);
+      gsap.set(materialsTrack, { clearProps: 'transform' });
+      gsap.set(sticky, { clearProps: 'opacity' });
 
-      const trackStyle = getComputedStyle(materialsTrack);
-      const gap = parseFloat(trackStyle.columnGap || trackStyle.gap || 0);
+      const isMobile = window.innerWidth <= 768;
+
+      gsap.set(materialsTrack, { x: 0 });
+      gsap.set(sticky, { opacity: 1 });
 
       const centerOffset = Math.max((window.innerWidth - lastPanel.offsetWidth) / 2, 0);
-
-      // 讓最後一張停在畫面中央
       const totalScroll = Math.max(0, lastPanel.offsetLeft - centerOffset);
 
       const tl = gsap.timeline({
@@ -1492,7 +1541,8 @@
           id: 'materials-sequence',
           trigger: story,
           start: 'top top',
-          end: () => `+=${totalScroll + window.innerHeight * 1.4}`,
+          end: () =>
+            `+=${totalScroll + window.innerHeight * (isMobile ? 1.9 : 1.4)}`,
           scrub: 1,
           pin: sticky,
           pinSpacing: true,
@@ -1507,12 +1557,12 @@
         duration: 1
       });
 
-      tl.to({}, { duration: 0.35 }); // 第六張停留一下
+      tl.to({}, { duration: isMobile ? 0.5 : 0.35 });
 
       tl.to(sticky, {
         opacity: 0,
         ease: 'power1.out',
-        duration: 0.16
+        duration: isMobile ? 0.22 : 0.16
       });
     }
 
