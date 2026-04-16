@@ -1,0 +1,1559 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CDC 韌性與循環創生</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+  <style>
+    :root {
+      --bg: #07111a;
+      --bg-soft: #0d1b27;
+      --text: #eef4f8;
+      --muted: rgba(255,255,255,0.76);
+      --line: rgba(255,255,255,0.12);
+      --accent: #79d2ff;
+      --accent-2: #7ce8c8;
+      --light-bg: #f4f7f8;
+      --light-text: #10202b;
+      --card: rgba(255,255,255,0.06);
+      --shadow: 0 20px 60px rgba(0,0,0,0.28);
+      --radius: 28px;
+      --maxw: 1200px;
+    }
+
+    .cdc-top-nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      z-index: 50;
+      padding: 2.5rem 3rem;
+      display: flex;
+      justify-content: flex-start;
+      align-items: center;
+      background: transparent;
+      pointer-events: none;
+    }
+
+    .cdc-top-nav .logo-text {
+      font-size: clamp(1.25rem, 2vw, 1.5rem);
+      font-weight: 700;
+      text-transform: uppercase;
+      color: #fff;
+    }
+
+    .cdc-footer {
+      position: relative;
+      z-index: 40;
+      padding: 4rem 1rem;
+      text-align: center;
+      background: #000;
+      border-top: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .cdc-footer p {
+      margin: 0;
+      font-family: 'Inter', sans-serif;
+      font-size: 10px;
+      letter-spacing: 0.5em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.3);
+    }
+
+    @media (max-width: 768px) {
+      .cdc-top-nav {
+        padding: 1.75rem 1.25rem;
+      }
+
+      .cdc-top-nav .logo-text {
+        font-size: 1rem;
+      }
+    }
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    .logo-text {
+      font-family: 'Inter', sans-serif;
+      letter-spacing: 0.4em;
+      margin-right: -0.4em;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Noto Sans TC", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow-x: hidden;
+      line-height: 1.7;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(121,210,255,0.08), transparent 30%),
+        radial-gradient(circle at 75% 30%, rgba(124,232,200,0.08), transparent 28%),
+        linear-gradient(180deg, rgba(255,255,255,0.02), transparent 30%);
+      pointer-events: none;
+      z-index: -3;
+    }
+
+    .data-grid {
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(121,210,255,0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(121,210,255,0.05) 1px, transparent 1px);
+      background-size: 48px 48px;
+      mask-image: linear-gradient(to bottom, rgba(0,0,0,0.85), transparent 85%);
+      opacity: 0.3;
+      pointer-events: none;
+      z-index: -2;
+    }
+
+    .section {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8rem 2rem;
+    }
+
+    .container {
+      width: min(100%, var(--maxw));
+      margin: 0 auto;
+    }
+
+    .eyebrow {
+      display: inline-block;
+      font-size: 0.9rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 1rem;
+    }
+
+    h1, h2, h3, p {
+      margin: 0;
+    }
+
+    .title {
+      font-size: clamp(2.3rem, 5vw, 5rem);
+      line-height: 1.06;
+      font-weight: 900;
+      letter-spacing: -0.02em;
+    }
+
+    .subtitle {
+      margin-top: 1rem;
+      color: var(--muted);
+      font-size: clamp(1rem, 1.5vw, 1.2rem);
+      max-width: 760px;
+    }
+
+    .copy {
+      margin-top: 2rem;
+      display: grid;
+      gap: 1rem;
+      max-width: 720px;
+      font-size: clamp(1.05rem, 1.3vw, 1.25rem);
+      color: rgba(255,255,255,0.9);
+    }
+
+    .panel {
+      background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(16px);
+    }
+
+    .section-dark {
+      background: linear-gradient(180deg, rgba(5,10,16,0.65), rgba(7,17,26,0.95));
+    }
+
+    .section-light {
+      background: linear-gradient(180deg, #eff4f6, #f7f9fa);
+      color: var(--light-text);
+    }
+
+    .section-light .eyebrow {
+      color: #0a7cb4;
+    }
+
+    .section-light .subtitle,
+    .section-light .copy,
+    .section-light .muted {
+      color: rgba(16,32,43,0.78);
+    }
+
+    /* 第一幕：維持不動 */
+    .hero-cinematic {
+      min-height: 220vh;
+      padding: 0;
+      background: #050c12;
+    }
+
+    .hero-sticky {
+      position: sticky;
+      top: 0;
+      min-height: 100vh;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      isolation: isolate;
+    }
+
+    .hero-media {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      z-index: 0;
+    }
+
+    .hero-image,
+    .building-outline {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .hero-image {
+      object-fit: cover;
+      object-position: center center;
+      transform-origin: center center;
+      will-change: transform, filter;
+      opacity: 1;
+    }
+
+    .building-outline {
+      pointer-events: none;
+      opacity: 0;
+      overflow: visible;
+      filter:
+        drop-shadow(0 0 4px rgba(121,210,255,0.5))
+        drop-shadow(0 0 12px rgba(121,210,255,0.25));
+    }
+
+    .building-outline path,
+    .building-outline polyline,
+    .building-outline line,
+    .building-outline rect {
+      fill: none;
+      stroke: rgba(160, 230, 255, 0.9);
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      vector-effect: non-scaling-stroke;
+    }
+
+    .building-outline .secondary {
+      stroke: rgba(144, 221, 255, 0.75);
+      stroke-width: 1.5;
+    }
+
+    .building-outline .highlight {
+      stroke: rgba(200, 245, 255, 1);
+      stroke-width: 3;
+      filter: drop-shadow(0 0 6px rgba(121,210,255,0.8));
+    }
+
+    .hero-overlay {
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(180deg, rgba(4,12,18,0.72) 0%, rgba(5,14,22,0.48) 32%, rgba(4,12,18,0.76) 100%),
+        radial-gradient(circle at 50% 45%, rgba(121,210,255,0.08), transparent 28%);
+      z-index: 1;
+    }
+
+    .hero-vignette {
+      position: absolute;
+      inset: 0;
+      box-shadow: inset 0 0 180px rgba(0,0,0,0.28);
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 3;
+      width: min(100%, 1180px);
+      height: 100vh;
+      padding: 5.5rem 2.5rem 4rem;
+      display: grid;
+      grid-template-columns: minmax(260px, 360px) 1fr;
+      align-items: end;
+      gap: 2rem;
+      pointer-events: none;
+    }
+
+    .hero-kicker {
+      display: inline-block;
+      margin-bottom: 1rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.72);
+      font-size: 0.82rem;
+    }
+
+    .hero-line {
+      max-width: 320px;
+      margin: 0;
+      font-size: clamp(1.55rem, 2.4vw, 2.6rem);
+      line-height: 1.16;
+      font-weight: 900;
+      letter-spacing: -0.03em;
+      text-shadow: 0 10px 30px rgba(0,0,0,0.24);
+      opacity: 0;
+      transform: translateY(28px);
+    }
+
+    .hero-line-2 {
+      margin-top: 3.5rem !important; 
+    }
+
+    .hero-copy {
+      margin-bottom: 1.5rem; 
+    }
+
+    .hero-line + .hero-line {
+      margin-top: 0.9rem;
+    }
+
+    .hero-copy {
+      max-width: 320px;
+      margin: 1.25rem 0 0;
+      color: rgba(255,255,255,0.84);
+      font-size: clamp(0.95rem, 1vw, 1.05rem);
+      line-height: 1.8;
+      opacity: 0;
+      transform: translateY(24px);
+    }
+
+    .hero-bridge {
+      margin-top: 1.5rem;
+      font-size: clamp(1rem, 1.35vw, 1.3rem);
+      font-weight: 700;
+      color: var(--accent-2);
+      opacity: 0;
+      transform: translateY(26px);
+      text-shadow: 0 8px 24px rgba(0,0,0,0.28);
+    }
+
+    .scroll-hint {
+      position: absolute;
+      left: 50%;
+      bottom: 2rem;
+      transform: translateX(-50%);
+      z-index: 3;
+      color: rgba(255,255,255,0.74);
+      font-size: 0.82rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.7rem;
+      opacity: 0.8;
+    }
+
+    .scroll-hint::after {
+      content: "";
+      width: 1px;
+      height: 44px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.72), transparent);
+      animation: hintMove 1.8s ease-in-out infinite;
+    }
+
+    @keyframes hintMove {
+      0%, 100% {
+        transform: translateY(0);
+        opacity: 0.5;
+      }
+      50% {
+        transform: translateY(8px);
+        opacity: 1;
+      }
+    }
+
+    /* 第二幕：材料環形展示 */
+    .materials-story {
+      position: relative;
+      height: 700vh;
+      background: transparent;
+      z-index: 1;
+    }
+
+    .materials-sticky {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      z-index: 2;
+      background:
+        radial-gradient(circle at 50% 18%, rgba(124,232,200,0.08), transparent 28%),
+        linear-gradient(180deg, #07111a 0%, #091722 50%, #0c1b28 100%);
+    }
+
+    .stats-section,
+    .section-dark {
+      position: relative;
+      z-index: 3;
+    }
+
+  .materials-intro {
+    width: min(1200px, 100% - 4rem);
+    margin: 0 auto 2rem;
+    text-align: center;
+  }
+
+  .materials-track {
+    display: flex;
+    gap: 3vw;
+    width: max-content;
+    padding: 0 8vw;
+    will-change: transform;
+  }
+
+  .material-panel {
+    width: 84vw;
+    max-width: 1280px;
+    min-height: 62vh;
+    border-radius: 32px;
+    padding: 2.2rem;
+    background: linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.03));
+    border: 1px solid rgba(255,255,255,0.10);
+    box-shadow: 0 24px 80px rgba(0,0,0,0.24);
+    backdrop-filter: blur(16px);
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 2rem;
+    align-items: center;
+  }
+
+  .material-meta h3 {
+    font-size: clamp(2rem, 4vw, 3.5rem);
+    margin: 0.3rem 0 0.8rem;
+  }
+
+  .material-meta p {
+    color: rgba(255,255,255,0.78);
+    font-size: 1.02rem;
+    line-height: 1.8;
+  }
+
+  .material-index {
+    display: inline-block;
+    font-size: 0.9rem;
+    letter-spacing: 0.18em;
+    color: var(--accent);
+  }
+
+  .material-compare {
+    display: grid;
+    grid-template-columns: 1fr 70px 1fr;
+    gap: 1rem;
+    align-items: center;
+  }
+
+  .compare-card {
+    position: relative;
+    height: 460px;
+    border-radius: 26px;
+    overflow: hidden;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .compare-card img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .compare-tag {
+    position: absolute;
+    left: 1rem;
+    top: 1rem;
+    z-index: 2;
+    padding: 0.5rem 0.9rem;
+    border-radius: 999px;
+    background: rgba(7,17,26,0.75);
+    border: 1px solid rgba(255,255,255,0.14);
+    font-size: 0.85rem;
+  }
+
+  .compare-arrow {
+    text-align: center;
+    font-size: 2rem;
+    color: rgba(255,255,255,0.75);
+  }
+
+  @media (max-width: 1024px) {
+    .materials-story {
+      height: 520vh;
+    }
+
+    .materials-sticky {
+      justify-content: flex-start;
+      padding-top: 5.5rem;
+      padding-bottom: 1.5rem;
+    }
+
+    .materials-intro {
+      width: min(100% - 2rem, 680px);
+      margin: 0 auto 1rem;
+    }
+
+    .materials-intro .title {
+      font-size: clamp(1.8rem, 6vw, 2.8rem);
+    }
+
+    .materials-intro .subtitle {
+      font-size: 0.95rem;
+      margin-top: 0.6rem;
+    }
+
+    .materials-track {
+      align-items: stretch;
+      padding: 0 4vw;
+      gap: 4vw;
+    }
+
+    .material-panel {
+      grid-template-columns: 1fr;
+      width: 92vw;
+      min-height: auto;
+      padding: 1.1rem;
+      gap: 1rem;
+      border-radius: 22px;
+    }
+
+    .material-meta h3 {
+      font-size: clamp(1.7rem, 5vw, 2.4rem);
+      margin: 0.2rem 0 0.45rem;
+    }
+
+    .material-meta p {
+      font-size: 0.92rem;
+      line-height: 1.65;
+    }
+
+    .material-compare {
+      grid-template-columns: 1fr;
+      gap: 0.7rem;
+    }
+
+    .compare-arrow {
+      transform: rotate(90deg);
+      font-size: 1.35rem;
+      line-height: 1;
+    }
+
+    .compare-card {
+      height: 24vh;
+      min-height: 160px;
+      max-height: 220px;
+      border-radius: 18px;
+    }
+
+    .compare-card img {
+      object-fit: cover;
+      object-position: center center;
+    }
+
+    .compare-tag {
+      left: 0.7rem;
+      top: 0.7rem;
+      padding: 0.38rem 0.72rem;
+      font-size: 0.76rem;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .materials-story {
+      height: 460vh;
+    }
+
+    .materials-sticky {
+      padding-top: 5rem;
+      padding-bottom: 1rem;
+    }
+
+    .materials-intro {
+      width: calc(100% - 1.25rem);
+      margin-bottom: 0.8rem;
+    }
+
+    .material-panel {
+      width: 94vw;
+      padding: 0.95rem;
+      gap: 0.85rem;
+    }
+
+    .material-meta p {
+      font-size: 0.88rem;
+      line-height: 1.55;
+    }
+
+    .compare-card {
+      height: 22vh;
+      min-height: 145px;
+      max-height: 190px;
+    }
+  }
+
+  /* 第三幕：數據卡重排版 */
+  .stats-section {
+    background:
+      radial-gradient(circle at 50% 20%, rgba(121,210,255,0.08), transparent 30%),
+      linear-gradient(180deg, #07111a 0%, #0b1c28 50%, #0f2533 100%);
+    color: var(--text);
+  }
+
+  .stats-section .eyebrow {
+    color: #476356;
+  }
+
+  .stats-section .subtitle {
+    color: rgba(16,32,43,0.72);
+  }
+
+  .stats-hero-row {
+    margin-top: 3rem;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+  }
+
+  .stats-kpi {
+    padding: 1.5rem 1.4rem;
+    border-radius: 24px;
+    background: #526759;
+    color: #f3e0d8;
+    box-shadow: 0 20px 40px rgba(16,32,43,0.08);
+  }
+
+  .stats-kpi-label {
+    display: inline-block;
+    margin-bottom: 0.6rem;
+    font-size: 0.82rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: 0.8;
+  }
+
+  .stats-kpi strong {
+    display: block;
+    font-size: clamp(2.2rem, 4vw, 4rem);
+    line-height: 1;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+  }
+
+  .stats-kpi p {
+    margin: 0;
+    font-size: 1rem;
+    min-height: 3em;
+    line-height: 1.4;
+  }
+
+  .stats-material-row {
+    margin-top: 1.4rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  .stats-material-card {
+    padding: 1.4rem;
+    border-radius: 24px;
+    background: #526759;
+    color: #f3e0d8;
+    box-shadow: 0 20px 40px rgba(16,32,43,0.08);
+  }
+
+  .stats-material-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    gap: 1rem;
+    margin-bottom: 1.2rem;
+  }
+
+  .stats-material-head h3 {
+    font-size: 1.4rem;
+    line-height: 1.2;
+    margin: 0;
+  }
+
+  .stats-material-value {
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  .stats-material-value strong {
+    font-size: clamp(2rem, 3vw, 3rem);
+    line-height: 1;
+    font-weight: 500;
+    color: #f9eee8;
+  }
+
+  .stats-material-value span {
+    margin-left: 0.35rem;
+    font-size: 1rem;
+    font-weight: 700;
+  }
+
+  .stats-material-body p {
+    margin: 0 0 1rem;
+    font-size: 1rem;
+    font-weight: 700;
+  }
+
+  .stats-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.7rem;
+  }
+
+  .stats-tag {
+    display: inline-flex;
+    align-items: center;
+    min-height: 42px;
+    padding: 0.7rem 0.95rem;
+    border-radius: 999px;
+    background: #b8c4bb;
+    color: #445448;
+    font-size: 0.92rem;
+    font-weight: 700;
+  }
+
+  .stats-breakdown {
+    display: grid;
+    gap: 0.65rem;
+  }
+
+  .stats-breakdown-item {
+    display: grid;
+    grid-template-columns: 72px 1fr;
+    gap: 0.8rem;
+    align-items: center;
+    padding: 0.75rem 0.9rem;
+    border-radius: 14px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(247,230,222,0.35);
+  }
+
+  .stats-breakdown-item b {
+    font-size: 1.15rem;
+    font-weight: 700;
+  }
+
+  .stats-breakdown-item span {
+    font-size: 0.95rem;
+    font-weight: 700;
+  }
+
+  .stats-usage-row {
+    margin-top: 1.2rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(247,230,222,0.35);
+
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.7rem;
+  }
+
+  .stats-usage-label {
+    width: 100%;
+    font-size: 0.8rem;
+    opacity: 0.7;
+    margin-bottom: 0.3rem;
+  }
+
+  .stats-chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 42px;
+    padding: 0.7rem 0.95rem;
+    border-radius: 999px;
+    background: #b8c4bb;
+    color: #445448;
+    font-size: 0.88rem;
+    font-weight: 700;
+    box-shadow: 0 10px 24px rgba(16,32,43,0.06);
+  }
+
+  .stats-summary {
+    margin-top: 1.4rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.2rem;
+    border-radius: 18px;
+    background: #e7e7e7;
+    color: #49584c;
+  }
+
+  .stats-summary strong {
+    font-size: 1rem;
+    font-weight: 700;
+  }
+
+  .stats-summary span {
+    font-size: clamp(1.2rem, 2vw, 2rem);
+    line-height: 1.1;
+  }
+
+  @media (max-width: 1024px) {
+    .stats-hero-row,
+    .stats-material-row {
+      grid-template-columns: 1fr;
+    }
+
+    .stats-summary {
+      flex-direction: column;
+      align-items: start;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .stats-kpi {
+      padding: 1.2rem;
+    }
+
+    .stats-material-card {
+      padding: 1.15rem;
+    }
+
+    .stats-material-head {
+      flex-direction: column;
+      align-items: start;
+    }
+
+    .stats-material-value {
+      text-align: left;
+    }
+
+    .stats-breakdown-item {
+      grid-template-columns: 58px 1fr;
+    }
+
+    .stats-summary span {
+      font-size: 1.2rem;
+    }
+  }
+  /* --- 第四幕：未來地標 --- */
+  .vision-final-stage {
+    position: relative;   /* 確保 z-index 生效 */
+    z-index: 10;          /* 確保層級高於第二、三幕 */
+    padding: 120px 0;
+    background:
+      radial-gradient(circle at 50% 20%, rgba(121,210,255,0.08), transparent 30%),
+      linear-gradient(180deg, #07111a 0%, #0b1c28 50%, #0f2533 100%);
+    overflow: hidden;
+  }
+
+  .vision-grid {
+    width: 90%;
+    max-width: 1400px;
+    margin: 0 auto;
+    display: grid;
+    /* 桌面端佈局：左文與產品，右大圖 */
+    grid-template-columns: 1fr 1.3fr;
+    grid-template-areas: 
+      "text main"
+      "prod main";
+    gap: 80px; /* 加大間距，減少擁擠感 */
+    align-items: center;
+  }
+
+  .vision-text { grid-area: text; }
+  .vision-product-group { grid-area: prod; }
+  .vision-main-image { grid-area: main; }
+
+  .vision-title {
+    font-size: clamp(2.8rem, 6vw, 4.8rem);
+    font-weight: 300;
+    margin: 20px 0;
+    letter-spacing: 5px;
+    line-height: 1.1;
+    text-transform: uppercase;
+  }
+
+  .vision-desc {
+    max-width: 420px;
+    color: var(--muted);
+    font-size: 1rem;
+    line-height: 1.9;
+  }
+
+  /* 產品圖組：桌面端垂直錯落 (創造設計感) */
+  .vision-product-group {
+    display: flex;
+    gap: 25px;
+    margin-top: 60px;
+  }
+
+  .product-box {
+    flex: 1;
+    text-align: center;
+    /* 桌面端讓產品圖產生高低差，打破死板 */
+  }
+
+  .product-box img {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    border: 1px solid var(--line);
+    background: rgba(255,255,255,0.02);
+    padding: 10px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  }
+
+  .product-box span {
+    display: block;
+    font-size: 11px;
+    margin-top: 15px;
+    color: var(--accent);
+    letter-spacing: 1.5px;
+    font-weight: bold;
+  }
+
+  /* 建築大圖 */
+  .vision-main-image {
+    position: relative;
+    height: 80vh;
+  }
+
+  .vision-main-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    box-shadow: 0 50px 100px rgba(0,0,0,0.6);
+    border-radius: 4px;
+  }
+
+  /* --- 手機端適應 (文字優先 > 產品同時淡入 > 建築壓軸) --- */
+  @media (max-width: 768px) {
+    .vision-final-stage {
+      padding: 80px 0;
+    }
+
+    .vision-grid {
+      display: flex;
+      flex-direction: column; 
+      gap: 70px; /* 增加大塊間距，不顯擠 */
+      text-align: center;
+    }
+
+    .vision-text {
+      order: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center; /* 確保 eyebrow, h2, p 整體置中 */
+    }
+
+    .vision-title {
+      letter-spacing: 0.2rem;
+    }
+
+    .vision-desc {
+      max-width: 90%;
+      margin: 0 auto;
+    }
+
+    .vision-product-group {
+      order: 2;
+      width: 100%;
+      padding: 0 20px;
+      margin-top: 0;
+      gap: 15px; /* 手機端縮小圖片間距 */
+    }
+
+    /* 取消桌面端的高低差 */
+    .product-box:nth-child(2),
+    .product-box:nth-child(3) { transform: translateY(0); }
+
+    .product-box img {
+      padding: 6px;
+    }
+
+    .product-box span {
+      font-size: 10px;
+      margin-top: 10px;
+    }
+
+    .vision-main-image {
+      order: 3;
+      height: 48vh;
+      width: 100%;
+      margin-top: 20px;
+    }
+  }
+    </style>
+  </head>
+  <body>
+    <div class="data-grid"></div>
+
+    <nav class="cdc-top-nav">
+      <span class="logo-text">REMOVE/REMAIN</span>
+    </nav>
+
+    <section class="hero-cinematic" id="hero">
+      <div class="hero-sticky">
+        <div class="hero-media">
+          <img src="./images/CDC原況.jpg" alt="CDC 原況" class="hero-image">
+
+          <svg class="building-outline" viewBox="0 0 1664 936" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+            <!-- 外輪廓 -->
+            <polyline class="highlight"
+              points="650,500 650,360 780,330 960,330 1090,360 1090,500" />
+
+            <!-- 垂直柱 -->
+            <line class="secondary" x1="700" y1="360" x2="700" y2="500" />
+            <line class="secondary" x1="750" y1="345" x2="750" y2="500" />
+            <line class="secondary" x1="800" y1="330" x2="800" y2="500" />
+            <line class="secondary" x1="850" y1="330" x2="850" y2="450" />
+            <line class="secondary" x1="900" y1="330" x2="900" y2="450" />
+            <line class="secondary" x1="950" y1="330" x2="950" y2="500" />
+            <line class="secondary" x1="1000" y1="345" x2="1000" y2="500" />
+            <line class="secondary" x1="1050" y1="360" x2="1050" y2="500" />
+
+            <!-- 水平線 -->
+            <line class="secondary" x1="700" y1="350" x2="1050" y2="350" />
+            <line class="secondary" x1="650" y1="400" x2="1090" y2="400" />
+            <line class="secondary" x1="650" y1="450" x2="1090" y2="450" />
+            <line class="secondary" x1="650" y1="500" x2="1090" y2="500" />
+
+            <!-- 中央入口 -->
+            <rect class="secondary" x="825" y="450" width="95" height="50" rx="2" />
+          </svg>
+        </div>
+
+        <div class="hero-overlay"></div>
+        <div class="hero-vignette"></div>
+
+        <div class="hero-content">
+          <div class="hero-text-panel">
+            <div class="hero-kicker">From Protection to Preservation</div>
+            <h1 class="hero-line hero-line-1">Beyond the Immediate.</h1>
+            <p class="hero-copy hero-copy-1">
+              Over two decades, Taiwan has evolved through SARS and COVID-19. This center stands not just as a shield for life, but as a testament to our collective resilience.
+            </p>
+            <h1 class="hero-line hero-line-2">Tracing the Legacy.</h1>
+            <p class="hero-copy hero-copy-2">
+              By preserving the historic grand hall and its iconic shell roofs, we bridge the gap between historical significance and contemporary architectural aesthetics.
+            </p>
+            <div class="hero-bridge">Protecting Life, Preserving Resources.</div>
+          </div>
+        </div>
+
+        <div class="scroll-hint">Scroll</div>
+      </div>
+    </section>
+
+    <section class="materials-story" id="materials-story">
+    <div class="materials-sticky">
+      <div class="materials-intro">
+        <span class="eyebrow">Recovered Materials</span>
+        <h2 class="title">Precision Dismantling</h2>
+        <p class="subtitle">
+          Moving beyond traditional demolition. We identify and categorize each component, ensuring every material returns to its rightful place in the circular economy.
+        </p>
+      </div>
+
+      <div class="materials-track">
+        <article class="material-panel">
+          <div class="material-meta">
+            <span class="material-index">01</span>
+            <h3>Glass</h3>
+            <p>Sorted by purity after removal, transitioning directly into advanced upcycling workflows.</p>
+          </div>
+          <div class="material-compare">
+            <div class="compare-card">
+              <span class="compare-tag">Pre</span>
+              <img src="./images/glass-before.jpg" alt="Glass Before">
+            </div>
+            <div class="compare-arrow">→</div>
+            <div class="compare-card">
+              <span class="compare-tag">Post</span>
+              <img src="./images/glass-after.jpg" alt="Glass After">
+            </div>
+          </div>
+        </article>
+
+        <article class="material-panel">
+          <div class="material-meta">
+            <span class="material-index">02</span>
+            <h3>Ceiling Systems</h3>
+            <p>Hand-dismantled and treated with sustainable sanitization to extend life cycles.</p>
+          </div>
+          <div class="material-compare">
+            <div class="compare-card">
+              <span class="compare-tag">Pre</span>
+              <img src="./images/ceiling-before.jpg" alt="Ceiling Before">
+            </div>
+            <div class="compare-arrow">→</div>
+            <div class="compare-card">
+              <span class="compare-tag">Post</span>
+              <img src="./images/ceiling-after.jpg" alt="Ceiling After">
+            </div>
+          </div>
+        </article>
+
+        <article class="material-panel">
+          <div class="material-meta">
+            <span class="material-index">03</span>
+            <h3>Timber</h3>
+            <p>Strategically diverted for reuse or biomass energy, maximizing carbon sequestration.</p>
+          </div>
+          <div class="material-compare">
+            <div class="compare-card">
+              <span class="compare-tag">Pre</span>
+              <img src="./images/wood-before.jpg" alt="Wood Before">
+            </div>
+            <div class="compare-arrow">→</div>
+            <div class="compare-card">
+              <span class="compare-tag">Post</span>
+              <img src="./images/wood-after.jpg" alt="Wood After">
+            </div>
+          </div>
+        </article>
+
+        <article class="material-panel">
+          <div class="material-meta">
+            <span class="material-index">04</span>
+            <h3>PVC Flooring</h3>
+            <p>Extracted through manual precision and micro-machinery to facilitate high-grade recycling.</p>
+          </div>
+          <div class="material-compare">
+            <div class="compare-card">
+              <span class="compare-tag">Pre</span>
+              <img src="./images/plastic-before.jpg" alt="PVC Before">
+            </div>
+            <div class="compare-arrow">→</div>
+            <div class="compare-card">
+              <span class="compare-tag">Post</span>
+              <img src="./images/plastic-after.jpg" alt="PVC After">
+            </div>
+          </div>
+        </article>
+
+        <article class="material-panel">
+          <div class="material-meta">
+            <span class="material-index">05</span>
+            <h3>Concrete</h3>
+            <p>Crushed and screened into high-quality recycled aggregates and manufactured sand.</p>
+          </div>
+          <div class="material-compare">
+            <div class="compare-card">
+              <span class="compare-tag">Pre</span>
+              <img src="./images/concrete-before.jpg" alt="Concrete Before">
+            </div>
+            <div class="compare-arrow">→</div>
+            <div class="compare-card">
+              <span class="compare-tag">Post</span>
+              <img src="./images/concrete-after.jpg" alt="Concrete After">
+            </div>
+          </div>
+        </article>
+
+        <article class="material-panel">
+          <div class="material-meta">
+            <span class="material-index">06</span>
+            <h3>Metal</h3>
+            <p>Deconstructed for remanufacturing, serving as a core element of regenerative architecture.</p>
+          </div>
+          <div class="material-compare">
+            <div class="compare-card">
+              <span class="compare-tag">Pre</span>
+              <img src="./images/metal-before.jpg" alt="Metal Before">
+            </div>
+            <div class="compare-arrow">→</div>
+            <div class="compare-card">
+              <span class="compare-tag">Post</span>
+              <img src="./images/metal-after.jpg" alt="Metal After">
+            </div>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section stats-section" id="stats">
+    <div class="container">
+      <span class="eyebrow">Proof of Circularity</span>
+      <h2 class="title reveal">Evidence of the Loop</h2>
+      <p class="subtitle reveal">
+        Every stage — from material weight and reprocessing methods to final destination — is meticulously verified for full transparency.
+      </p>
+
+        <div class="stats-hero-row">
+            <article class="stats-kpi reveal-up">
+                <span class="stats-kpi-label">Recycled</span>
+                <strong>99%</strong>
+                <p>Re-entered the Circular Chain</p>
+            </article>
+
+            <article class="stats-kpi reveal-up">
+                <span class="stats-kpi-label">Incineration</span>
+                <strong>&lt;1%</strong>
+                <p>Final Incineration Rate</p>
+            </article>
+
+            <article class="stats-kpi reveal-up">
+                <span class="stats-kpi-label">Outcome</span>
+                <strong>99%</strong>
+                <p>Total Resource Recovery</p>
+            </article>
+        </div>
+
+        <div class="stats-material-row">
+          <article class="stats-material-card reveal-up">
+            <div class="stats-material-head">
+              <h3>Concrete &amp; Brick</h3>
+              <div class="stats-material-value">
+                <strong>12,696</strong>
+                <span>Tons</span>
+              </div>
+            </div>
+
+            <div class="stats-material-body">
+
+              <!-- 上層 -->
+              <div class="stats-breakdown">
+                <div class="stats-breakdown-item">
+                  <b>100%</b>
+                  <span>Recycled as Manufactured Sand</span>
+                </div>
+              </div>
+
+              <!-- 下層（新增分隔 + 改成 chip） -->
+              <div class="stats-usage-row">
+                <div class="stats-usage-label">Usage</div>
+                <span class="stats-chip">30% Used for CDC case</span>
+                <span class="stats-chip">70% Used for other construction</span>
+              </div>
+
+            </div>
+          </article>
+
+          <article class="stats-material-card reveal-up">
+            <div class="stats-material-head">
+              <h3>Construction Residuals</h3>
+              <div class="stats-material-value">
+                <strong>1,143</strong>
+                <span>Tons</span>
+              </div>
+            </div>
+            <div class="stats-material-body">
+              <div class="stats-breakdown">
+                <div class="stats-breakdown-item">
+                  <b>50%</b>
+                  <span>Wood</span>
+                </div>
+                <div class="stats-breakdown-item">
+                  <b>34%</b>
+                  <span>Mixed waste</span>
+                </div>
+                <div class="stats-breakdown-item">
+                  <b>10%</b>
+                  <span>Plastic</span>
+                </div>
+                <div class="stats-breakdown-item">
+                  <b>4%</b>
+                  <span>Glass</span>
+                </div>
+                <div class="stats-breakdown-item">
+                  <b>2%</b>
+                  <span>Reuse to Extend Lifespan</span>
+                </div>
+              </div>
+
+              <div class="stats-usage-row">
+                <div class="stats-usage-label">Usage</div>
+                <span class="stats-chip">Bio-fuel</span>
+                <span class="stats-chip">Recycled Resource &amp; SRF</span>
+                <span class="stats-chip">Plastic pellets</span>
+                <span class="stats-chip">Glass material</span>
+                <span class="stats-chip">Construction Temporary Facility</span>
+                <span class="stats-chip">Material Reuse</span>
+              </div>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="vision-final-stage" id="final-act">
+      <div class="vision-grid">
+        
+        <div class="vision-text reveal">
+          <span class="eyebrow">The New Landmark</span>
+          <h2 class="vision-title">A Vision of Resilience</h2>
+          <p class="vision-desc">
+            More than an inauguration, it is the rebirth of 1,143 tons of material. We carry the mission of protection into a future of sustainable circulation.
+          </p>
+        </div>
+
+        <div class="vision-product-group reveal-up">
+          <div class="product-box">
+            <img src="./images/glass-product1.jpg" alt="Regenerated Glass A">
+            <span>01 Refracted Memories</span>
+          </div>
+          <div class="product-box">
+            <img src="./images/glass-product2.jpg" alt="Regenerated Glass B">
+            <span>02 Crystalline Shield</span>
+          </div>
+          <div class="product-box">
+            <img src="./images/glass-product3.jpg" alt="Recycled Material C">
+            <span>03 Symbiotic Loop</span>
+          </div>
+        </div>
+
+        <div class="vision-main-image reveal">
+          <img src="./images/CDC未來.jpg" alt="CDC Future Vision">
+        </div>
+
+      </div>
+    </section>
+
+    <footer class="cdc-footer">
+      <p>Fengyu × Milan Design Week 2026</p>
+    </footer>
+
+    <script>
+      gsap.registerPlugin(ScrollTrigger);
+
+      gsap.utils.toArray('.reveal').forEach((el) => {
+        gsap.from(el, {
+          y: 36,
+          opacity: 0,
+          duration: 1.05,
+          ease: 'power3.out',
+          scrollTrigger: {
+            trigger: el,
+            start: 'top 84%'
+          }
+        });
+      });
+
+      gsap.utils.toArray('.reveal-up').forEach((el, i) => {
+        gsap.from(el, {
+          y: 50,
+          opacity: 0,
+          duration: 0.9,
+          delay: i * 0.08,
+          ease: 'power3.out',
+          scrollTrigger: {
+            trigger: el,
+            start: 'top 88%'
+          }
+        });
+      });
+
+      gsap.utils.toArray('.reveal-scale').forEach((el) => {
+        gsap.from(el, {
+          scale: 0.94,
+          opacity: 0,
+          duration: 1.1,
+          ease: 'power3.out',
+          scrollTrigger: {
+            trigger: el,
+            start: 'top 82%'
+          }
+        });
+      });
+
+      /* 第一幕維持不動 */
+      const horizontalEls = document.querySelectorAll(
+        '.building-outline line.secondary[x1="650"][y1="350"], ' +
+        '.building-outline line.secondary[x1="650"][y1="400"], ' +
+        '.building-outline line.secondary[x1="650"][y1="450"], ' +
+        '.building-outline line.secondary[x1="650"][y1="500"]'
+      );
+
+      const verticalEls = document.querySelectorAll(
+        '.building-outline line.secondary[x1="700"], ' +
+        '.building-outline line.secondary[x1="750"], ' +
+        '.building-outline line.secondary[x1="800"], ' +
+        '.building-outline line.secondary[x1="850"], ' +
+        '.building-outline line.secondary[x1="900"], ' +
+        '.building-outline line.secondary[x1="950"], ' +
+        '.building-outline line.secondary[x1="1000"], ' +
+        '.building-outline line.secondary[x1="1050"]'
+      );
+
+      const outlineMain = document.querySelector('.building-outline .highlight');
+      const entrance = document.querySelector('.building-outline rect.secondary');
+
+      const allOutlineEls = document.querySelectorAll(
+        '.building-outline path, .building-outline polyline, .building-outline line, .building-outline rect'
+      );
+
+      allOutlineEls.forEach((el) => {
+        const length = el.getTotalLength();
+        el.style.strokeDasharray = length;
+        el.style.strokeDashoffset = length;
+      });
+
+      const heroTl = gsap.timeline({
+        scrollTrigger: {
+          trigger: '#hero',
+          start: 'top top',
+          end: 'bottom bottom',
+          scrub: 1.2
+        }
+      });
+
+      heroTl
+        .to('.hero-image', { scale: 1.08, filter: 'brightness(0.92)' }, 0)
+        .to('.hero-line-1', { opacity: 1, y: 0, duration: 0.8 }, 0.08)
+        .to('.hero-line-2', { opacity: 1, y: 0, duration: 0.7 }, 0.24)
+        .to('.hero-copy-1', { opacity: 1, y: 0, duration: 0.6 }, 0.18)
+        .to('.building-outline', { opacity: 1, duration: 0.25 }, 0.28)
+        .to(horizontalEls, {
+          strokeDashoffset: 0,
+          stagger: 0.05,
+          duration: 0.6,
+          ease: 'power2.out'
+        }, 0.34)
+        .to(verticalEls, {
+          strokeDashoffset: 0,
+          stagger: 0.05,
+          duration: 0.7,
+          ease: 'power2.out'
+        }, 0.46)
+        .to(entrance, {
+          strokeDashoffset: 0,
+          duration: 0.45,
+          ease: 'power2.out'
+        }, 0.62)
+        .to(outlineMain, {
+          strokeDashoffset: 0,
+          duration: 0.8,
+          ease: 'power2.out'
+        }, 0.68)
+        .to('.hero-copy-2', { opacity: 1, y: 0, duration: 0.7 }, 0.62)
+        .to('.hero-bridge', { opacity: 1, y: 0, duration: 0.65 }, 0.86)
+        .to('.scroll-hint', { opacity: 0.12, duration: 0.3 }, 0.9);
+
+      const materialsTrack = document.querySelector('.materials-track');
+
+      function setupMaterialsScroll() {
+        ScrollTrigger.getAll().forEach((st) => {
+          if (
+            st.vars &&
+            (st.vars.trigger === '#materials-story' || st.vars.id === 'materials-sequence')
+          ) {
+            st.kill();
+          }
+        });
+
+        const story = document.querySelector('#materials-story');
+        const sticky = document.querySelector('.materials-sticky');
+        const lastPanel = materialsTrack.querySelector('.material-panel:last-child');
+
+        gsap.killTweensOf(materialsTrack);
+        gsap.killTweensOf(sticky);
+        gsap.set(materialsTrack, { x: 0 });
+        gsap.set(sticky, { opacity: 1 });
+
+      const trackStyle = getComputedStyle(materialsTrack);
+      const gap = parseFloat(trackStyle.columnGap || trackStyle.gap || 0);
+
+      const centerOffset = Math.max((window.innerWidth - lastPanel.offsetWidth) / 2, 0);
+
+      // 讓最後一張停在畫面中央
+      const totalScroll = Math.max(0, lastPanel.offsetLeft - centerOffset);
+
+      const tl = gsap.timeline({
+        scrollTrigger: {
+          id: 'materials-sequence',
+          trigger: story,
+          start: 'top top',
+          end: () => `+=${totalScroll + window.innerHeight * 1.4}`,
+          scrub: 1,
+          pin: sticky,
+          pinSpacing: true,
+          anticipatePin: 1,
+          invalidateOnRefresh: true
+        }
+      });
+
+      tl.to(materialsTrack, {
+        x: -totalScroll,
+        ease: 'none',
+        duration: 1
+      });
+
+      tl.to({}, { duration: 0.35 }); // 第六張停留一下
+
+      tl.to(sticky, {
+        opacity: 0,
+        ease: 'power1.out',
+        duration: 0.16
+      });
+    }
+
+    setupMaterialsScroll();
+
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        setupMaterialsScroll();
+        ScrollTrigger.refresh();
+      }, 150);
+    });
+
+    // 當捲動到最後一幕時，讓兩張玻璃照片有輕微的浮動感（Parallax）
+    gsap.to(".artifact-1", {
+      y: -30,
+      scrollTrigger: {
+        trigger: "#final-act",
+        scrub: 1
+      }
+    });
+
+    gsap.to(".artifact-2", {
+      y: 30,
+      scrollTrigger: {
+        trigger: "#final-act",
+        scrub: 1
+      }
+    });
+
+    gsap.from(".product-box", {
+      y: 30,
+      opacity: 0,
+      stagger: 0.2, // 每張圖間隔 0.2 秒
+      duration: 1,
+      ease: "power2.out",
+      scrollTrigger: {
+        trigger: ".vision-product-group",
+        start: "top 80%"
+      }
+    });
+    </script>
+  </body>
+</html>
